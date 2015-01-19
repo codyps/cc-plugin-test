@@ -1,0 +1,26 @@
+#! /bin/sh
+set -euf
+
+S="$(dirname "$0")"
+
+die () {
+	echo "$@"
+	exit 1
+}
+
+run () {
+	"$@" || die "Running '$@' failed"
+}
+
+copy () {
+	local s="${CFG_GCC_SRC_DIR}/$1"
+	run cp "$s" "$2"
+}
+
+mkdir -p "$S/gcc"
+copy gcc/gcc-plugin.h "$S/gcc"
+run sed -i -e '/#include.*/d' \
+	-e '/#define IN_GCC.*/d' \
+	"$S/gcc/gcc-plugin.h"
+
+copy gcc/plugin.def "$S/gcc"

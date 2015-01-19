@@ -1,6 +1,7 @@
 #! /bin/sh
 set -euf
 
+S=$(dirname "$0")
 : ${CROSS_COMPILER:=}
 : ${CC:=${CROSS_COMPILER}cc}
 
@@ -12,7 +13,7 @@ set -euf
 : ${GIT_VER:=$(git describe --dirty=+ --always --abbrev=0)}
 
 LIBS=
-LIB_CFLAGS="-I${CFG_GCC_SRC_DIR}"
+LIB_CFLAGS="-I${S}"
 LIB_LDFLAGS=""
 
 CFG_CFLAGS="-DCFG_GIT_VERSION=${GIT_VER}"
