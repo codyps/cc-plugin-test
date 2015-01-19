@@ -1,0 +1,94 @@
+#! /bin/sh
+set -euf
+
+: ${CROSS_COMPILER:=}
+: ${CC:=${CROSS_COMPILER}cc}
+
+: ${PKGCONFIG:=pkg-config}
+: ${WARN_FLAGS_C:="-Wstrict-prototypes -Wmissing-prototypes -Wold-style-definition -Wmissing-declarations -Wbad-function-cast"}
+: ${WARN_FLAGS:="-Wall -Wundef -Wshadow -Wcast-align -Wwrite-strings ${WARN_FLAGS_C}"}
+: ${COMMON_FLAGS:="-fsanitize=address -flto -Os -ggdb3"}
+: ${CFLAGS:="${COMMON_FLAGS}"}
+: ${GIT_VER:=$(git describe --dirty=+ --always --abbrev=0)}
+
+LIBS=
+LIB_CFLAGS="-I${CFG_GCC_SRC_DIR}"
+LIB_LDFLAGS=""
+
+CFG_CFLAGS="-DCFG_GIT_VERSION=${GIT_VER}"
+CFLAGS="${WARN_FLAGS} -std=c99 -D_GNU_SOURCE ${CFG_CFLAGS} ${LIB_CFLAGS} ${CFLAGS}"
+: ${LDFLAGS:="${COMMON_FLAGS}"}
+LDFLAGS="${LIB_LDFLAGS} ${LDFLAGS}"
+
+exec >build.ninja
+
+cat <<EOF
+cc = $CC
+cflags = $CFLAGS
+ldflags = $LDFLAGS
+so_cflags = -fPIC
+so_ldflags = -fPIC -shared
+
+rule cc
+  command = \$cc \$cflags -MMD -MF \$out.d  -c \$in -o \$out
+  depfile = \$out.d
+
+rule ccld
+  command = \$cc \$ldflags -o \$out \$in
+
+rule ninja_gen
+  command = $0
+  generator = yes
+build build.ninja : ninja_gen $0
+EOF
+
+to_out () {
+  for i in "$@"; do
+    printf "%s " ".build-$out/$i"
+  done
+}
+
+to_obj () {
+  for i in "$@"; do
+    printf "%s " ".build-$out/$i.o"
+  done
+}
+
+_ev () {
+	eval echo "\${$1}"
+}
+
+bin_or_so () {
+	kind="$1"
+	shift
+	out="$1"
+	shift
+	out_var="${out/./_}"
+
+	for s in "$@"; do
+		echo build $(to_obj "$s"): cc $s
+		if [ "$kind" = so ]; then
+			echo "  cflags = \$cflags \$so_cflags"
+		fi
+	done
+
+	echo "build $out : ccld $(to_obj "$@")"
+	if [ "$kind" = so ]; then
+		echo "  ldflags = \$ldflags \$so_ldflags"
+	fi
+	DEFAULTS="$DEFAULTS $out"
+}
+
+bin () {
+	bin_or_so bin "$@"
+}
+
+so () {
+	bin_or_so so "$@"
+}
+
+DEFAULTS=""
+
+so test-plugin.so test-plugin.c
+
+echo default ${DEFAULTS}
