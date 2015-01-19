@@ -1,6 +1,4 @@
-enum insert_option { NO_INSERT, INSERT };
-#include <stdbool.h>
-#include <gcc/gcc-plugin.h>
+#include "gcc-plugin.h"
 
 #include <stdio.h>
 

@@ -13,7 +13,7 @@ S=$(dirname "$0")
 : ${GIT_VER:=$(git describe --dirty=+ --always --abbrev=0)}
 
 LIBS=
-LIB_CFLAGS="-I${S}"
+LIB_CFLAGS="-I`${CC} -print-file-name=plugin`/include"
 LIB_LDFLAGS=""
 
 CFG_CFLAGS="-DCFG_GIT_VERSION=${GIT_VER}"
